@@ -77,7 +77,7 @@ class OhHellGame():
     
     def get_state(self):
         if self.is_over():
-            return {'trump_suit': self.trump_card.suit} | self.round.get_state() | {'tricks_won': self.judge.judge_game(self.players)}
+            return {'trump_suit': self.trump_card.suit} | self.round.get_state()# | {'tricks_won': self.judge.judge_game(self.players)}
         else:
             return {'trump_suit': self.trump_card.suit} | self.round.get_state()
     

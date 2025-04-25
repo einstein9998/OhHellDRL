@@ -6,6 +6,7 @@ from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback,
 import torch
 
 from ohhell import OhHellEnv
+from masking import MaskedMlpPolicy
 
 env = OhHellEnv()
 env = make_vec_env(OhHellEnv)
@@ -22,7 +23,7 @@ callback = CallbackList([checkpoint_callback, eval_callback])
 
 policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=(dict(pi=[350, 350, 63], vf=[350, 350, 100])))
 
-model = PPO('MlpPolicy', env, policy_kwargs=policy_kwargs, tensorboard_log="./tmp/", 
+model = PPO(MaskedMlpPolicy, env, policy_kwargs=policy_kwargs, tensorboard_log="./tmp/", 
              verbose=1, seed=2)
 
 start = time.time()
