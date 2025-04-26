@@ -10,11 +10,9 @@ from ohhell import OhHellEnv
 from masking import MaskedMlpPolicy
 from feature_extractor import DictFeatureExtractor
 
-env = DummyVecEnv([lambda: OhHellEnv()])
-env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+env = make_vec_env(lambda: OhHellEnv(), n_envs=1)
 
-eval_env = DummyVecEnv([lambda: OhHellEnv()])
-eval_env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+eval_env = make_vec_env(lambda: OhHellEnv(), n_envs=1)
 
 checkpoint_callback = CheckpointCallback(save_freq=6144, save_path='./logs/logs_ppo/legal_moves', name_prefix='training')
 
