@@ -35,7 +35,7 @@ class OhHellEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
     
-    def _extract_state(self, state, i):
+    def _extract_state(self, state):
         obs_list = []
 
         obs_list.append(one_bit_set(4, Card.suits.index(state['trump_suit']))) # trump suit
@@ -85,7 +85,7 @@ class OhHellEnv(gym.Env):
             # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
             # fictitious_action, _ = self.trained_model.predict(current_obs)
             # state, _ = self.game.step(self._decode_action(fictitious_action))
-            action = np.random.choice(self.game.get_legal_actions())
+            action = np.random.choice(self.game.round.get_legal_actions())
             self.game.step(action)
 
         self.action_recorder = []
@@ -124,11 +124,11 @@ class OhHellEnv(gym.Env):
         tricks_before = player.tricks_won
 
         next_state = self.game.step(action)
-        while not self.game.players[self.game.round.current_player].isTraining:
+        while not self.game.players[self.game.round.current_player].isTraining and not self.game.is_over():
             # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
             # fictitious_action, _ = self.trained_model.predict(current_obs)
             # state, _ = self.game.step(self._decode_action(fictitious_action))
-            action = np.random.choice(self.game.get_legal_actions())
+            action = np.random.choice(self.game.round.get_legal_actions())
             self.game.step(action)
 
         tricks_after = player.tricks_won

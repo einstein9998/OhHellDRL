@@ -19,6 +19,7 @@ class OhHellRound():
         self.bids = [None for _ in range(self.num_players)]
 
     def get_num_bids(self):
+        n_bids = sum(b is not None for b in self.bids)
         return sum(b is not None for b in self.bids)
 
     def proceed_round(self, action):
@@ -44,10 +45,10 @@ class OhHellRound():
         self.current_player %= self.num_players
 
     def get_legal_actions(self):
-        if self.players[self.current_player].bid == -1:
+        if self.players[self.current_player].bid is None:
             full = list(range(self.cards_per_player + 1))
             if self.get_num_bids() == self.num_players - 1:
-                return [b for b in full if b != self.cards_per_player - sum(self.bids)]
+                return [b for b in full if b != self.cards_per_player - sum(b for b in self.bids if b is not None)]
             else:
                 return full
         else:
