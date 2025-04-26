@@ -4,7 +4,7 @@ class OhHellPlayer():
         self.player_id = player_id
         self.hand = []
         self.played_cards = []
-        self.bid = -1
-        #self.isTraining = isTraining
+        self.bid = None
+        self.isTraining = isTraining
         self.tricks_won = 0
         self.acted = False

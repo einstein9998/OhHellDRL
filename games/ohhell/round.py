@@ -16,10 +16,10 @@ class OhHellRound():
 
         self.verbose = verbose
 
-        self.bids = [-1 for _ in range(self.num_players)]
+        self.bids = [None for _ in range(self.num_players)]
 
     def get_num_bids(self):
-        return sum(b >= 0 for b in self.bids)
+        return sum(b is not None for b in self.bids)
 
     def proceed_round(self, action):
         legal_actions = self.get_legal_actions()

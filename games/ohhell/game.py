@@ -21,9 +21,9 @@ class OhHellGame():
 
         self.players = [Player(i, self.np_random) for i in range(self.num_players)]
 
-        #self.training_index = random.randint(0, 3)
-        #self.players[self.training_index].isTraining = True
-        #if self.verbose: print([player.isTraining for player in self.players])
+        self.training_index = random.randint(0, 3)
+        self.players[self.training_index].isTraining = True
+        if self.verbose: print([player.isTraining for player in self.players])
 
         self.judge = Judge(self.np_random)
 
