@@ -2,17 +2,19 @@ import time
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 import torch
 
 from ohhell import OhHellEnv
 from masking import MaskedMlpPolicy
+from feature_extractor import DictFeatureExtractor
 
-env = OhHellEnv()
-env = make_vec_env(OhHellEnv)
+env = DummyVecEnv([lambda: OhHellEnv()])
+env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-eval_env = OhHellEnv()
-eval_env = make_vec_env(OhHellEnv)
+eval_env = DummyVecEnv([lambda: OhHellEnv()])
+eval_env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
 checkpoint_callback = CheckpointCallback(save_freq=6144, save_path='./logs/logs_ppo/legal_moves', name_prefix='training')
 
@@ -21,7 +23,7 @@ eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/logs_ppo/leg
 
 callback = CallbackList([checkpoint_callback, eval_callback])
 
-policy_kwargs = dict(activation_fn=torch.nn.ReLU, net_arch=(dict(pi=[350, 350, 63], vf=[350, 350, 100])))
+policy_kwargs = dict(features_extractor_class=DictFeatureExtractor, activation_fn=torch.nn.ReLU, net_arch=(dict(pi=[350, 350, 63], vf=[350, 350, 100])))
 
 model = PPO(MaskedMlpPolicy, env, policy_kwargs=policy_kwargs, tensorboard_log="./tmp/", 
              verbose=1, seed=2)

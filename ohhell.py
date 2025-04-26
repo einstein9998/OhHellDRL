@@ -76,26 +76,17 @@ class OhHellEnv(gym.Env):
         return np.concatenate(obs_list)
     
     def _get_info(self):
-        return {
-            "action_mask": self.get_action_mask()
-        }
+        return {}
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         state = self.game.init_game()
 
-        # while not self.game.players[self.game.round.current_player].isTraining:
-        #     # current_obs = self._extract_state(self.game.round.get_state())
-        #     # action, _ = self.trained_model.predict(current_obs)
-        #     # state = self.game.step(self._decode_action(action))
-        #     action = np.random.choice(self.game.round.get_legal_actions())
-        #     state = self.game.step(action)
-        
         self.action_recorder = []
-        observation = self._extract_state(state)
+        obs = self._extract_state(state)
         info = self._get_info()
 
-        return {"obs": observation, "action_mask": info}, {}
+        return {"obs": obs, "action_mask": self.get_action_mask()}, info
     
     def _decode_action(self, action_id):
         legal_ids = list(self._get_legal_actions())
@@ -126,13 +117,6 @@ class OhHellEnv(gym.Env):
 
         agent_action_was_available = self.was_action_available
 
-        # while not self.game.players[self.game.round.current_player].isTraining and not self.game.is_over():
-        #     # current_obs = self._extract_state(self.game.round.get_state())
-        #     # action, _ = self.trained_model.predict(current_obs)
-        #     # state, _ = self.game.step(self._decode_action(action))
-        #     action = np.random.choice(self.game.round.get_legal_actions())
-        #     next_state = self.game.step(action)
-
         new_tricks_won = self.game.players[agent].tricks_won
 
         #reward = new_tricks_won - current_tricks_won # TODO: is this even correct?
@@ -147,7 +131,7 @@ class OhHellEnv(gym.Env):
 
         self.timestep += 1
 
-        return {"obs": obs, "action_mask": info}, reward, done, truncated, {}
+        return {"obs": obs, "action_mask": self.get_action_mask()}, reward, done, truncated, info
     
     def get_action_mask(self):
         mask = np.zeros(self.action_space.n, dtype=np.uint8)
@@ -155,7 +139,6 @@ class OhHellEnv(gym.Env):
         mask[legal_actions] = 1
         return mask
         
-
     def _get_legal_actions(self):
         legal_actions = self.game.round.get_legal_actions()
         if self.game.round.get_num_bids() == self.game.num_players: # TODO: make this a helper fn in round
