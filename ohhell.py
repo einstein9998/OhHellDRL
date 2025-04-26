@@ -19,8 +19,14 @@ class OhHellEnv(gym.Env):
         self.ACTION_SPACE = Card.get_index_52() | dict((str(i), i + 52) for i in range(self.game.n_cards + 1))
         self.ACTION_LIST = list(self.ACTION_SPACE.keys())
 
-        self.observation_space = gym.spaces.MultiBinary(260)
-        self.action_space = gym.spaces.Discrete(52 + self.game.n_cards + 1)
+        n_actions = 52 + self.game.n_cards + 1
+
+        #self.observation_space = gym.spaces.MultiBinary(260)
+        self.observation_space = gym.spaces.Dict({
+            "obs": gym.spaces.Box(low=0, high=1, shape=(260,), dtype=np.float32),
+            "action_mask": gym.spaces.Box(low=0, high=1, shape=(n_actions,), dtype=np.uint8)
+        })
+        self.action_space = gym.spaces.Discrete(n_actions)
 
         self.card2index = Card.get_standard_deck()
 
@@ -89,7 +95,7 @@ class OhHellEnv(gym.Env):
         observation = self._extract_state(state)
         info = self._get_info()
 
-        return observation, info
+        return {"obs": observation, "action_mask": info}, {}
     
     def _decode_action(self, action_id):
         legal_ids = list(self._get_legal_actions())
@@ -141,7 +147,7 @@ class OhHellEnv(gym.Env):
 
         self.timestep += 1
 
-        return obs, reward, done, truncated, info
+        return {"obs": obs, "action_mask": info}, reward, done, truncated, {}
     
     def get_action_mask(self):
         mask = np.zeros(self.action_space.n, dtype=np.uint8)
