@@ -5,7 +5,7 @@ from copy import deepcopy, copy
 from games.ohhell import Dealer, Player, Judge, Round
 
 class OhHellGame():
-    def __init__(self, allow_step_back=False, num_players=4, n_cards=10, verbose=False):
+    def __init__(self, allow_step_back=False, num_players=4, n_cards=2, verbose=False):
         self.allow_step_back = allow_step_back
         self.np_random = np.random.RandomState()
         self.num_players = num_players

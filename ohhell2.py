@@ -7,7 +7,7 @@ from games.ohhell import Game
 from games.base import Card
 from utils.utils import rank2int, one_bit_set, int_to_binary_array
 
-class OhHellEnv(gym.Env):
+class OhHellEnv2(gym.Env):
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.game = Game(verbose=verbose)
@@ -16,10 +16,10 @@ class OhHellEnv(gym.Env):
         self.action_recorder = []
         self.timestep = 0
 
-        self.ACTION_SPACE = Card.get_index_52() | dict((str(i), i + 52) for i in range(self.game.n_cards + 1))
+        self.ACTION_SPACE = Card.get_index_52()
         self.ACTION_LIST = list(self.ACTION_SPACE.keys())
 
-        n_actions = 52 + self.game.n_cards + 1
+        n_actions = 52
 
         self.observation_space = gym.spaces.Dict({
             "obs": gym.spaces.Box(low=0, high=1, shape=(134,), dtype=np.float32),
@@ -28,8 +28,6 @@ class OhHellEnv(gym.Env):
         self.action_space = gym.spaces.Discrete(n_actions)
 
         self.card2index = Card.get_standard_deck()
-
-        self.was_action_available = True
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -48,34 +46,12 @@ class OhHellEnv(gym.Env):
         else:
             obs_list.append(np.zeros(11))
         obs_list.append(one_bit_set(11, state['tricks_won'][state['current_player']]))
-        # obs_list.append(one_bit_set(self.game.num_players, state['current_player'])) # our index
-        # for i in range(self.game.num_players): # player information
-        #     # obs_list.append(int_to_binary_array(state['bids'][i] if state['bids'][i] >= 0 else 0, num_bits=5)) # player bid
-        #     # obs_list.append(int_to_binary_array(state['tricks_won'][i], num_bits=5)) # player tricks taken
-        #     if state['bids'][i] is not None:
-        #         obs_list.append(one_bit_set(11, state['bids'][i]))
-        #     else:
-        #         obs_list.append(np.zeros(11))
-        #     obs_list.append(one_bit_set(11, state['tricks_won'][i]))
-        #     # if state['played_cards'][i]:
-        #     #     obs_list.append(one_bit_set(52, np.array([self.card2index.index(card) for card in state['played_cards'][i]]))) # player cards played
-        #     # else:
-        #     #     obs_list.append(np.zeros(52))
-        # if any(state['played_cards'][i] for i in range(self.game.num_players)):
-        #     obs_list.append(one_bit_set(52, np.array([self.card2index.index(card) for i in range(self.game.num_players) for card in state['played_cards'][i]])))
-        # else:
-        #     obs_list.append(np.zeros(52))
         if state['trick']: 
             obs_list.append(one_bit_set(4, Card.suits.index(state['trick'][0].suit))) # led suit
             obs_list.append(one_bit_set(52, np.array([self.card2index.index(card) for card in state['trick']]))) # cards played in trick
         else:
             obs_list.append(np.zeros(4))
             obs_list.append(np.zeros(52))
-        
-        # if any(state['acted']):
-        #     obs_list.append(one_bit_set(4, np.array([i for i in range(self.game.num_players) if state['acted'][i]])))
-        # else:
-        #     obs_list.append(np.zeros(4))
 
         return np.concatenate(obs_list)
     
@@ -86,7 +62,7 @@ class OhHellEnv(gym.Env):
         super().reset(seed=seed)
         state = self.game.init_game()
 
-        while not self.game.players[self.game.round.current_player].isTraining:
+        while self.game.players[self.game.round.current_player].bid is None or not self.game.players[self.game.round.current_player].isTraining:
             # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
             # fictitious_action, _ = self.trained_model.predict(current_obs)
             # state, _ = self.game.step(self._decode_action(fictitious_action))
@@ -129,7 +105,7 @@ class OhHellEnv(gym.Env):
         tricks_before = player.tricks_won
 
         next_state = self.game.step(action)
-        while not self.game.players[self.game.round.current_player].isTraining and not self.game.is_over():
+        while (self.game.players[self.game.round.current_player].bid is None or not self.game.players[self.game.round.current_player].isTraining) and not self.game.is_over():
             # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
             # fictitious_action, _ = self.trained_model.predict(current_obs)
             # state, _ = self.game.step(self._decode_action(fictitious_action))
@@ -178,5 +154,5 @@ class OhHellEnv(gym.Env):
 
 
 if __name__ == '__main__':
-    env = OhHellEnv()
+    env = OhHellEnv2()
     obs = env.reset()
