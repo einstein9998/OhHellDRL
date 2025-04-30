@@ -19,8 +19,13 @@ class OhHellEnv(gym.Env):
         self.ACTION_SPACE = Card.get_index_52() | dict((str(i), i + 52) for i in range(self.game.n_cards + 1))
         self.ACTION_LIST = list(self.ACTION_SPACE.keys())
 
-        self.observation_space = gym.spaces.MultiBinary(260)
-        self.action_space = gym.spaces.Discrete(52 + self.game.n_cards + 1)
+        n_actions = 52 + self.game.n_cards + 1
+
+        self.observation_space = gym.spaces.Dict({
+            "obs": gym.spaces.Box(low=0, high=1, shape=(260,), dtype=np.float32),
+            "action_mask": gym.spaces.Box(low=0, high=1, shape=(n_actions,), dtype=np.uint8)
+        })
+        self.action_space = gym.spaces.Discrete(n_actions)
 
         self.card2index = Card.get_standard_deck()
 
@@ -42,7 +47,7 @@ class OhHellEnv(gym.Env):
         for i in range(self.game.num_players): # player information
             # obs_list.append(int_to_binary_array(state['bids'][i] if state['bids'][i] >= 0 else 0, num_bits=5)) # player bid
             # obs_list.append(int_to_binary_array(state['tricks_won'][i], num_bits=5)) # player tricks taken
-            if state['bids'][i] >= 0:
+            if state['bids'][i] is not None:
                 obs_list.append(one_bit_set(11, state['bids'][i]))
             else:
                 obs_list.append(np.zeros(11))
@@ -70,26 +75,24 @@ class OhHellEnv(gym.Env):
         return np.concatenate(obs_list)
     
     def _get_info(self):
-        return {
-            "action_mask": self.get_action_mask()
-        }
+        return {}
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         state = self.game.init_game()
 
-        # while not self.game.players[self.game.round.current_player].isTraining:
-        #     # current_obs = self._extract_state(self.game.round.get_state())
-        #     # action, _ = self.trained_model.predict(current_obs)
-        #     # state = self.game.step(self._decode_action(action))
-        #     action = np.random.choice(self.game.round.get_legal_actions())
-        #     state = self.game.step(action)
-        
+        while not self.game.players[self.game.round.current_player].isTraining:
+            # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
+            # fictitious_action, _ = self.trained_model.predict(current_obs)
+            # state, _ = self.game.step(self._decode_action(fictitious_action))
+            action = np.random.choice(self.game.round.get_legal_actions())
+            self.game.step(action)
+
         self.action_recorder = []
-        observation = self._extract_state(state)
+        obs = self._extract_state(state)
         info = self._get_info()
 
-        return observation, info
+        return {"obs": obs, "action_mask": self.get_action_mask()}, info
     
     def _decode_action(self, action_id):
         legal_ids = list(self._get_legal_actions())
@@ -111,37 +114,48 @@ class OhHellEnv(gym.Env):
                 return int(self.ACTION_LIST[np.random.choice(legal_ids)])
     
     def step(self, action, raw_action=False):
+        agent_idx = self.game.round.current_player
+        player = self.game.players[agent_idx]
+
         if not raw_action:
             action = self._decode_action(action)
         
-        agent = self.game.round.current_player
-        current_tricks_won = self.game.players[agent].tricks_won
+        bid = player.bid
+        tricks_before = player.tricks_won
+
         next_state = self.game.step(action)
+        while not self.game.players[self.game.round.current_player].isTraining and not self.game.is_over():
+            # current_obs = self._extract_state(self.game.get_state(self.game.current_player))
+            # fictitious_action, _ = self.trained_model.predict(current_obs)
+            # state, _ = self.game.step(self._decode_action(fictitious_action))
+            action = np.random.choice(self.game.round.get_legal_actions())
+            self.game.step(action)
 
-        agent_action_was_available = self.was_action_available
+        tricks_after = player.tricks_won
 
-        # while not self.game.players[self.game.round.current_player].isTraining and not self.game.is_over():
-        #     # current_obs = self._extract_state(self.game.round.get_state())
-        #     # action, _ = self.trained_model.predict(current_obs)
-        #     # state, _ = self.game.step(self._decode_action(action))
-        #     action = np.random.choice(self.game.round.get_legal_actions())
-        #     next_state = self.game.step(action)
+        delta = tricks_after - tricks_before
 
-        new_tricks_won = self.game.players[agent].tricks_won
-
-        #reward = new_tricks_won - current_tricks_won # TODO: is this even correct?
-        if agent_action_was_available: # first train to make legal moves
-            reward = 1
-        else:
-            reward = -1 - 9 * (1 - np.exp(-5 * self.timestep/12000000))
+        reward = 0
+        if bid is not None:
+            if delta == 1:
+                reward += 1 if tricks_after <= bid else -1
+            if tricks_before == bid and delta == 0:
+                reward += 0.5
+        
         done = self.game.is_over()
+        if done:
+            if player.tricks_won == player.bid:
+                reward += 10
+            else:
+                reward -= abs(player.tricks_won - player.bid)
+                
         truncated = False
         info = self._get_info()
         obs = self._extract_state(next_state)
 
         self.timestep += 1
 
-        return obs, reward, done, truncated, info
+        return {"obs": obs, "action_mask": self.get_action_mask()}, reward, done, truncated, info
     
     def get_action_mask(self):
         mask = np.zeros(self.action_space.n, dtype=np.uint8)
@@ -149,7 +163,6 @@ class OhHellEnv(gym.Env):
         mask[legal_actions] = 1
         return mask
         
-
     def _get_legal_actions(self):
         legal_actions = self.game.round.get_legal_actions()
         if self.game.round.get_num_bids() == self.game.num_players: # TODO: make this a helper fn in round
